@@ -1,17 +1,6 @@
 ﻿// src/pages/DashboardPage.tsx
 // -------------------------------------------------------------------------------------------------
-// PayVerify Dashboard (Dark Gloss / Glass Theme) + Merchants Tile (Modal)
-// -------------------------------------------------------------------------------------------------
-// WHAT CHANGED (and why):
-// 1) NEW import of MerchantsModal (no route needed). Opens a modal from the dashboard tile.
-// 2) NEW state: `merchantsOpen` to control modal visibility; `merchantsCount` to show count on tile.
-// 3) NEW helper `fetchMerchantsCount()` (role-aware: admin=all, non-admin=mine) with graceful fallbacks.
-// 4) UPDATED initial load & manual refresh to also call `fetchMerchantsCount()` so the tile stays accurate.
-// 5) NEW clickable "Merchants" tile alongside the existing analytics tiles; opens the modal.
-// 6) MINOR CLEANUP: interval cleanup now clears the actual interval ref (prevents a subtle leak).
-// -------------------------------------------------------------------------------------------------
-// NOTE: You’ll also add a new file `src/components/MerchantsModal.tsx` (the modal we open here).
-//       No new route is required, and this does not break existing dashboard behavior.
+// PayVerify Dashboard (Dark Gloss / Glass Theme) + Merchants Tile (Modal) + Purchase Orders
 // -------------------------------------------------------------------------------------------------
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -20,14 +9,15 @@ import Navbar from '../components/Navbar';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'react-toastify';
+import { Badge } from 'react-bootstrap';
 
 // Admin-only panel
 import AdminBanksPanel from '../components/AdminBanksPanel';
 
-// -----------------------------------------
-// NEW: Merchants modal (opened by tile click)
-// -----------------------------------------
+// Modals
 import MerchantsModal from '../components/MerchantsModal';
+import PurchaseOrdersModal from '../components/PurchaseOrdersModal';
+import CreatePurchaseOrderModal from '../components/CreatePurchaseOrderModal'; // ADDED: Import CreatePurchaseOrderModal
 
 import AiInsightsPanel from '../components/AiInsightsPanel';
 import FraudScoreCard from '../components/FraudScoreCard';
@@ -52,6 +42,40 @@ type Tiles = {
     highValueMonthCount: number;
     fraudScore: number;       // 0–100
 };
+
+// Purchase Order Type (aligned with backend response)
+interface PurchaseOrder {
+    id: string;
+    poNumber: string;
+    poReference?: string;
+    amount: number;
+    totalAmount?: number;
+    status: 'pending' | 'approved' | 'rejected' | 'completed';
+    createdAt: string;
+    dueDate: string;
+    description?: string;
+    merchantName?: string;
+    merchantId: string; // Made required to match PurchaseOrdersModal
+    customerEmail?: string;
+    items?: Array<{
+        id: string;
+        name: string;
+        description: string;
+        quantity: number;
+        unitPrice: number;
+        total: number;
+    }>;
+}
+
+interface PurchaseOrdersStats {
+    totalOrders: number;
+    pendingOrders: number;
+    approvedOrders: number;
+    rejectedOrders?: number;
+    completedOrders?: number;
+    totalAmount: number;
+    pendingAmount: number;
+}
 
 // Endpoint sometimes returns { tiles, events }, sometimes flat (just tiles)
 type TilesResponse = { tiles?: Tiles; events?: any[] } | Tiles;
@@ -89,13 +113,23 @@ const DashboardPage = () => {
     const [tiles, setTiles] = useState<Tiles | null>(null);
     const [loading, setLoading] = useState(true);
 
+    // Purchase Orders state
+    const [poStats, setPoStats] = useState<PurchaseOrdersStats | null>(null);
+    const [recentPurchaseOrders, setRecentPurchaseOrders] = useState<PurchaseOrder[]>([]);
+    const [showPurchaseOrdersModal, setShowPurchaseOrdersModal] = useState(false);
+    const [allPurchaseOrders, setAllPurchaseOrders] = useState<PurchaseOrder[]>([]);
+
+    // ADDED: State for Create Purchase Order Modal
+    const [showCreatePurchaseOrderModal, setShowCreatePurchaseOrderModal] = useState(false);
+
     // Keep a stable interval id across renders for auto-refresh
     const refreshTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
+    // 🔥 NEW: track completed count to detect new payments
+    const prevCompletedRef = useRef<number>(0);
+
     // ---------------------------------------------------------
-    // NEW: Merchants UI state (modal visibility + count on tile)
-    // - merchantsOpen: controls the modal opened from the tile
-    // - merchantsCount: shows count (admin=all, non-admin=mine)
+    // Merchants UI state (modal visibility + count on tile)
     // ---------------------------------------------------------
     const [merchantsOpen, setMerchantsOpen] = useState(false);
     const [merchantsCount, setMerchantsCount] = useState<number | null>(null);
@@ -136,10 +170,7 @@ const DashboardPage = () => {
     }, [user]);
 
     // ---------------------------------------------------------
-    // NEW: Role-aware merchants count with graceful fallback
-    // - Tries GET /merchants/count?scope=all|mine first (fast path)
-    // - Falls back to GET /merchants?scope=...&limit=1 and reads X-Total-Count
-    // - If headers not present, falls back to array length (still safe)
+    // Role-aware merchants count with graceful fallback
     // ---------------------------------------------------------
     const fetchMerchantsCount = async () => {
         if (!token) return;
@@ -174,6 +205,162 @@ const DashboardPage = () => {
         }
     };
 
+    // ---------------------------------------------------------
+    // Fetch Purchase Orders Stats and Recent Orders
+    // ---------------------------------------------------------
+    const fetchPurchaseOrdersStats = async () => {
+        if (!token) return;
+        try {
+            // Fetch PO stats - updated to match backend response structure
+            const statsRes = await api.get('/purchase-orders/stats', {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
+            // Handle both response formats
+            const responseData = statsRes.data || {};
+            const statsData = responseData.stats || responseData;
+
+            setPoStats({
+                totalOrders: asNum(statsData.total) || asNum(statsData.totalOrders),
+                pendingOrders: asNum(statsData.pending) || asNum(statsData.pendingOrders),
+                approvedOrders: asNum(statsData.approved) || asNum(statsData.approvedOrders),
+                rejectedOrders: asNum(statsData.rejected) || asNum(statsData.rejectedOrders),
+                completedOrders: asNum(statsData.completed) || asNum(statsData.completedOrders),
+                totalAmount: asNum(statsData.totalAmount),
+                pendingAmount: asNum(statsData.pendingAmount)
+            });
+
+            // Fetch recent purchase orders
+            const recentRes = await api.get('/purchase-orders', {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
+            const orders =
+                recentRes.data?.data ??
+                recentRes.data ??
+                [];
+
+            /*setRecentPurchaseOrders(orders.slice(0, 5));*/
+            setRecentPurchaseOrders(
+                orders.slice(0, 5).map((po: any) => ({
+                    ...po,
+                    poNumber:
+                        po.poNumber ||
+                        po.po_number ||
+                        po.po_reference ||
+                        po.reference ||
+                        po.id ||
+                        "",
+                    amount:
+                        po.amount ||
+                        po.totalAmount ||
+                        po.total_amount ||
+                        0,
+                    merchantName:
+                        po.merchantName ||
+                        po.merchant?.name ||
+                        "N/A",
+                }))
+            );
+
+            // Fetch all purchase orders for the modal
+            const allRes = await api.get('/purchase-orders', {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
+            // Handle paginated or direct array response
+            const allOrdersData = allRes.data || {};
+            const ordersArray = allOrdersData.data || allOrdersData;
+            setAllPurchaseOrders(Array.isArray(ordersArray) ? ordersArray : []);
+
+        } catch (err) {
+            console.error('Failed to fetch purchase orders data:', err);
+            // Set default empty stats to prevent UI breakage
+            setPoStats({
+                totalOrders: 0,
+                pendingOrders: 0,
+                approvedOrders: 0,
+                rejectedOrders: 0,
+                completedOrders: 0,
+                totalAmount: 0,
+                pendingAmount: 0
+            });
+            setRecentPurchaseOrders([]);
+            setAllPurchaseOrders([]);
+        }
+    };
+
+    // -----------------------------
+    // Status badge helper for Purchase Orders
+    // -----------------------------
+    const getStatusBadge = (status: string) => {
+        switch (status) {
+            case 'pending':
+                return <Badge bg="warning">Pending</Badge>;
+
+            case 'approved':
+                return <Badge bg="success">Approved</Badge>;
+
+            case 'paid': // ✅ ADD THIS
+                return <Badge bg="primary">PAID</Badge>;
+
+            case 'rejected':
+                return <Badge bg="danger">Rejected</Badge>;
+
+            case 'completed':
+                return <Badge bg="info">Completed</Badge>;
+
+            default:
+                return <Badge bg="secondary">{status}</Badge>;
+        }
+    };
+
+    // -----------------------------
+    // Format date for display
+    // -----------------------------
+    const formatDate = (dateString: string) => {
+        try {
+            return new Date(dateString).toLocaleDateString('en-NG', {
+                day: 'numeric',
+                month: 'short'
+            });
+        } catch {
+            return 'Invalid date';
+        }
+    };
+
+    // -----------------------------
+    // Refresh handler for purchase orders modal
+    // -----------------------------
+    const handleRefreshPurchaseOrders = async () => {
+        await fetchPurchaseOrdersStats();
+        toast.success('Purchase orders refreshed');
+    };
+
+    // ADDED: Refresh function for after creating a new PO
+    const refreshAllPurchaseOrders = async () => {
+        await fetchPurchaseOrdersStats();
+    };
+
+    // -----------------------------
+    // Transform purchase order data for modal
+    // -----------------------------
+    const transformPurchaseOrdersForModal = (orders: PurchaseOrder[]): any[] => {
+        return orders.map(order => ({
+            ...order,
+            // Ensure all required fields are present for the modal
+            id: order.id,
+            poNumber: order.poNumber || order.poReference || '',
+            amount: order.amount || order.totalAmount || 0,
+            status: order.status || 'pending',
+            createdAt: order.createdAt,
+            dueDate: order.dueDate,
+            description: order.description || '',
+            merchantName: order.merchantName || '',
+            merchantId: order.merchantId || '',
+        }));
+    };
+
     // -----------------------------
     // Initial load + auto-refresh
     // -----------------------------
@@ -185,7 +372,6 @@ const DashboardPage = () => {
             return;
         }
 
-        // NOTE (unchanged): dashboard tiles/stats fetcher
         const fetchALL = async () => {
             try {
                 setLoading(true);
@@ -195,6 +381,23 @@ const DashboardPage = () => {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 setStats(res.data as BasicStats);
+
+                // 🔥 NEW: Detect new payment confirmation
+                const newCompleted = res.data.completed;
+
+                if (
+                    prevCompletedRef.current !== 0 &&
+                    newCompleted > prevCompletedRef.current
+                ) {
+                    const diff = newCompleted - prevCompletedRef.current;
+
+                    toast.success(`🔔 ${diff} New payment confirmation alert`);
+
+                    // Refresh purchase orders immediately
+                    await fetchPurchaseOrdersStats();
+                }
+
+                prevCompletedRef.current = newCompleted;
 
                 // Analytics tiles (normalize payload)
                 const tilesRes = await api.get<TilesResponse>('/analytics/tiles', {
@@ -212,11 +415,12 @@ const DashboardPage = () => {
                     fraudScore: asNum(t?.fraudScore),
                 });
 
-                // ---------------------------------------------
-                // CHANGED: also refresh merchants count for tile
-                // - keeps the tile up-to-date without page reload
-                // ---------------------------------------------
+                // Refresh merchants count
                 await fetchMerchantsCount();
+
+                // Refresh purchase orders data
+                await fetchPurchaseOrdersStats();
+
             } catch (err: any) {
                 console.error(err);
                 if (err?.response?.status === 401) {
@@ -234,18 +438,19 @@ const DashboardPage = () => {
         // Kick off fetching
         fetchALL();
 
-        // Auto-refresh every 60s; store id in ref
-        refreshTimer.current = setInterval(fetchALL, 60_000);
+        //// Auto-refresh every 60s; store id in ref
+        //refreshTimer.current = setInterval(fetchALL, 60000);
 
-        // ----------------------------------------------------------
-        // CHANGED: Correct interval cleanup (clearInterval(ref only))
-        // - Prevents leaking an interval on unmount / route change
-        // ----------------------------------------------------------
+        refreshTimer.current = setInterval(async () => {
+            await fetchPurchaseOrdersStats();
+        }, 15000);
+
+        // Cleanup interval on unmount
         return () => {
             if (refreshTimer.current) clearInterval(refreshTimer.current);
             refreshTimer.current = null;
         };
-    }, [token, logout, navigate, isAdmin]); // include isAdmin so scope stays correct
+    }, [token, logout, navigate, isAdmin]);
 
     // -----------------------------
     // Manual refresh handler
@@ -272,10 +477,11 @@ const DashboardPage = () => {
                 fraudScore: asNum(t?.fraudScore),
             });
 
-            // ---------------------------------------------
-            // CHANGED: refresh merchants count on manual click
-            // ---------------------------------------------
+            // Refresh merchants count
             await fetchMerchantsCount();
+
+            // Refresh purchase orders data
+            await fetchPurchaseOrdersStats();
 
             toast.success('Dashboard refreshed');
         } catch (err: any) {
@@ -287,7 +493,7 @@ const DashboardPage = () => {
     };
 
     // -----------------------------
-    // Loading state (keeps background theme visible)
+    // Loading state
     // -----------------------------
     if (loading) {
         return (
@@ -331,10 +537,17 @@ const DashboardPage = () => {
                             <Link to="/profile" className="btn btn-primary btn-sm shadow-sm">
                                 Profile Settings
                             </Link>
+                            {/* FIXED: Changed from Link to button that opens modal */}
+                            <button
+                                className="btn btn-success btn-sm shadow-sm"
+                                onClick={() => setShowCreatePurchaseOrderModal(true)}
+                            >
+                                + Create PO
+                            </button>
                         </div>
                     </div>
 
-                    {/* Legacy KPI cards (restyled as glossy tiles with descriptions) */}
+                    {/* Legacy KPI cards */}
                     <div className="row mt-3">
                         <div className="col-md-3 mb-3">
                             <div className="pv-glass-card">
@@ -377,7 +590,55 @@ const DashboardPage = () => {
                         </div>
                     </div>
 
-                    {/* New Analytics tiles (+ Merchants tile) */}
+                    {/* Purchase Orders Stats Row */}
+                    <div className="row mt-3">
+                        <div className="col-md-3 mb-3">
+                            <div className="pv-glass-card pv-gloss-gradient">
+                                <div className="pv-card-body">
+                                    <div className="pv-tile-title">Total POs</div>
+                                    <div className="pv-tile-value">{fmtInt(poStats?.totalOrders)}</div>
+                                    <div className="pv-tile-desc">All purchase orders created.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="col-md-3 mb-3">
+                            <div className="pv-glass-card pv-gloss-gradient">
+                                <div className="pv-card-body">
+                                    <div className="pv-tile-title">Pending POs</div>
+                                    <div className="pv-tile-value text-warning">{fmtInt(poStats?.pendingOrders)}</div>
+                                    <div className="pv-tile-desc">Awaiting approval.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="col-md-3 mb-3">
+                            <button
+                                className="pv-gloss-gradient pv-glass-card w-100 text-start"
+                                onClick={() => setShowPurchaseOrdersModal(true)}
+                                aria-label="View all purchase orders"
+                                style={{ cursor: 'pointer', border: 'none', background: 'transparent' }}
+                            >
+                                <div className="pv-card-body">
+                                    <div className="pv-tile-title">Purchase Orders</div>
+                                    <div className="pv-tile-value">{fmtInt(poStats?.totalOrders)}</div>
+                                    <div className="pv-tile-desc">View and manage all purchase orders</div>
+                                </div>
+                            </button>
+                        </div>
+
+                        <div className="col-md-3 mb-3">
+                            <div className="pv-glass-card pv-gloss-gradient">
+                                <div className="pv-card-body">
+                                    <div className="pv-tile-title">PO Value</div>
+                                    <div className="pv-tile-value text-success">{fmtMoney(poStats?.totalAmount)}</div>
+                                    <div className="pv-tile-desc">Total value of all purchase orders.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Analytics tiles */}
                     <div className="row mt-2">
                         <div className="col-md-3 mb-3">
                             <div className="pv-gloss-gradient pv-glass-card">
@@ -430,13 +691,10 @@ const DashboardPage = () => {
                         </div>
 
                         <div className="col-sm-6 col-md-3">
-                            <FraudScoreCard initialScore={tiles?.fraudScore ?? 0} />
+                            <FraudScoreCard />
                         </div>
 
-                        {/* ----------------------------------------------------
-                           NEW: Clickable Merchants tile (opens modal, no route)
-                           - Displays count (role-aware) with graceful fallback
-                           ---------------------------------------------------- */}
+                        {/* Merchants tile */}
                         <div className="col-md-3 mb-3">
                             <button
                                 className="pv-gloss-gradient pv-glass-card w-100 text-start"
@@ -454,6 +712,85 @@ const DashboardPage = () => {
                                     </div>
                                 </div>
                             </button>
+                        </div>
+                    </div>
+
+                    {/* Recent Purchase Orders Section */}
+                    <div className="row mt-4">
+                        <div className="col-12">
+                            <div className="pv-glass-card">
+                                <div className="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary">
+                                    <div>
+                                        <h5 className="mb-0 text-light">Recent Purchase Orders</h5>
+                                        <p className="text-light opacity-75 mb-0">
+                                            Latest purchase orders requiring attention
+                                        </p>
+                                    </div>
+                                    <button
+                                        className="btn btn-outline-light btn-sm"
+                                        onClick={() => setShowPurchaseOrdersModal(true)}
+                                    >
+                                        View All
+                                    </button>
+                                </div>
+                                <div className="p-3">
+                                    {recentPurchaseOrders.length > 0 ? (
+                                        <div className="table-responsive">
+                                            <table className="table table-dark table-hover mb-0">
+                                                <thead>
+                                                    <tr>
+                                                        <th className="border-secondary">PO Number</th>
+                                                        {isAdmin && <th className="border-secondary">Merchant</th>}
+                                                        <th className="border-secondary">Amount</th>
+                                                        <th className="border-secondary">Status</th>
+                                                        <th className="border-secondary">Created</th>
+                                                        <th className="border-secondary">Due Date</th>
+                                                        <th className="border-secondary">Description</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {recentPurchaseOrders.map((po) => (
+                                                        <tr key={po.id} style={{ cursor: 'pointer' }}
+                                                            onClick={() => navigate(`/purchase-orders/${po.id}`)}>
+                                                            <td>
+                                                                <strong>PO-{po.poNumber}</strong>
+                                                            </td>
+                                                            {isAdmin && (
+                                                                <td>{po.merchantName || 'N/A'}</td>
+                                                            )}
+                                                            <td className="fw-bold">{fmtMoney(po.amount)}</td>
+                                                            <td>{getStatusBadge(po.status)}</td>
+                                                            <td>{formatDate(po.createdAt)}</td>
+                                                            <td>{formatDate(po.dueDate)}</td>
+                                                            <td className="text-truncate" style={{ maxWidth: '200px' }}>
+                                                                {po.description || 'No description'}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    ) : (
+                                        <div className="text-center py-4">
+                                            <p className="text-muted mb-3">No purchase orders found</p>
+                                            {/* FIXED: Changed from Link to button that opens modal */}
+                                            <button
+                                                className="btn btn-primary"
+                                                onClick={() => setShowCreatePurchaseOrderModal(true)}
+                                            >
+                                                Create Your First Purchase Order
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                                {recentPurchaseOrders.length > 0 && (
+                                    <div className="p-3 border-top border-secondary text-center">
+                                        <small className="text-muted">
+                                            Showing {Math.min(recentPurchaseOrders.length, 5)} of {poStats?.totalOrders || 0} purchase orders
+                                        </small>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
 
@@ -477,16 +814,39 @@ const DashboardPage = () => {
                 </div>
             </div>
 
-            {/* ----------------------------------------------------
-               NEW: Merchants modal mounted at the end of the page
-               - Opens from the Merchants tile; no navigation needed
-               ---------------------------------------------------- */}
+            {/* Modals */}
             <MerchantsModal
                 open={merchantsOpen}
                 onClose={() => setMerchantsOpen(false)}
             />
 
-            {/* Inline style injection for the theme (kept close to the page for easy removal later) */}
+            {/* Fixed PurchaseOrdersModal usage with transformed data */}
+            <PurchaseOrdersModal
+                open={showPurchaseOrdersModal}
+                onClose={() => setShowPurchaseOrdersModal(false)}
+                purchaseOrders={transformPurchaseOrdersForModal(allPurchaseOrders)}
+                onRefresh={handleRefreshPurchaseOrders}
+                isAdmin={isAdmin}
+            />
+
+            {/* ADDED: CreatePurchaseOrderModal for creating new purchase orders */}
+            <CreatePurchaseOrderModal
+                open={showCreatePurchaseOrderModal}
+                onClose={() => setShowCreatePurchaseOrderModal(false)}
+                onCreateSuccess={async () => {
+
+                    await fetchPurchaseOrdersStats();
+
+                    setShowCreatePurchaseOrderModal(false);
+
+                    setShowPurchaseOrdersModal(true);
+
+                    toast.success('Purchase order created successfully!');
+                }}
+                isAdmin={isAdmin}
+            />
+
+            {/* Inline style injection for the theme */}
             <StyleBlock />
         </>
     );
@@ -494,10 +854,6 @@ const DashboardPage = () => {
 
 /**
  * StyleBlock
- * - Recreates a 2-color shade (black → deep blue) with subtle radial glows
- * - Provides glossy/glass card aesthetics and hover elevation
- * - Adds a "pv-welcome" style that reads well on dark backgrounds
- * - Keeps styles scoped to dashboard wrappers to avoid leaking globally
  */
 const StyleBlock = () => (
     <style>{`
@@ -568,14 +924,6 @@ const StyleBlock = () => (
         linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.05));
     }
 
-    /* --- Fraud tile slight warning glow --- */
-    .pv-fraud {
-      box-shadow:
-        0 10px 24px rgba(0, 0, 0, 0.35),
-        0 0 32px rgba(255, 127, 39, 0.15),
-        inset 0 1px 0 rgba(255,255,255,0.12);
-    }
-
     /* --- Card inner spacing & typography --- */
     .pv-card-body { padding: 16px 18px; }
     .pv-tile-title {
@@ -607,6 +955,24 @@ const StyleBlock = () => (
       color: #fff;
     }
 
+    /* Table styles for dark theme */
+    .table-dark {
+      --bs-table-bg: transparent;
+      --bs-table-color: #e9f2ff;
+      --bs-table-border-color: rgba(255,255,255,0.12);
+    }
+
+    .table-hover tbody tr:hover {
+      --bs-table-accent-bg: rgba(255,255,255,0.05);
+    }
+
+    /* Badge styles for status */
+    .badge {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+
     /* Keep HR visible on dark */
     hr.border-secondary {
       border-top-color: rgba(255,255,255,0.2) !important;
@@ -615,3 +981,10 @@ const StyleBlock = () => (
 );
 
 export default DashboardPage;
+
+
+
+
+
+
+

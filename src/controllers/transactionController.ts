@@ -300,3 +300,45 @@ export const getMerchantTransactionsById = async (req: Request, res: Response) =
         return res.status(500).json({ message: 'Server error while fetching transactions by merchant' });
     }
 };
+
+
+/**
+* GET /api/transactions/:id
+* Returns details for a single transaction
+*/
+export const getTransactionDetails = async (req: Request, res: Response) => {
+    try {
+        const transactionId = Number(req.params.id);
+
+        if (!Number.isFinite(transactionId)) {
+            return res.status(400).json({
+                message: 'Invalid transaction id'
+            });
+        }
+
+        const transaction = await Transaction.findByPk(transactionId, {
+            include: [
+                {
+                    model: Merchant,
+                    as: 'merchant',
+                    attributes: ['id', 'name']
+                }
+            ]
+        });
+
+        if (!transaction) {
+            return res.status(404).json({
+                message: 'Transaction not found'
+            });
+        }
+
+        return res.status(200).json(transaction);
+
+    } catch (err) {
+        console.error('Error fetching transaction details:', err);
+
+        return res.status(500).json({
+            message: 'Server error while fetching transaction details'
+        });
+    }
+};

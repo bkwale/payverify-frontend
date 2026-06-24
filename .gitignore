@@ -70,3 +70,22 @@ swagger.yaml
 ####################################
 scripts/tmp/
 scripts/output/
+
+
+# Environment files
+.env
+.env.*
+
+# Database backups
+*.dump
+
+# Node modules
+node_modules/
+
+# Build output
+dist/
+frontend/dist/
+
+# Generated files
+receipts/
+*.tsbuildinfo
