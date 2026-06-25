@@ -41,6 +41,7 @@
  */
 
 import { Sequelize } from 'sequelize';
+import pg from 'pg';
 
 // ---------------------------
 // Load env configuration
@@ -78,6 +79,7 @@ const sslOptions = needsSSL
 export const sequelize = DATABASE_URL
     ? new Sequelize(DATABASE_URL, {
         dialect: 'postgres',
+        dialectModule: pg,
         logging: NODE_ENV === 'development',
         dialectOptions: sslOptions,
         pool: {
@@ -90,6 +92,7 @@ export const sequelize = DATABASE_URL
     : new Sequelize(DB_NAME, DB_USER, DB_PASS, {
         host: DB_HOST,
         dialect: 'postgres',
+        dialectModule: pg,
         logging: NODE_ENV === 'development',
         dialectOptions: sslOptions,
         pool: {
