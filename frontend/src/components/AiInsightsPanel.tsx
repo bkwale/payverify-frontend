@@ -29,7 +29,7 @@ export default function AiInsightsPanel() {
                     <button className="btn btn-sm btn-outline-primary" onClick={load}>Refresh</button>
                 </div>
 
-                {loading && <div className="mt-3">Analyzing…</div>}
+                {loading && <div className="mt-3">Analyzingâ€¦</div>}
                 {err && <div className="alert alert-danger mt-3">{err}</div>}
 
                 {!loading && !err && data && (

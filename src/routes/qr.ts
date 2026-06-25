@@ -26,7 +26,7 @@ router.post('/regenerate/:merchantId', verifyJwtMiddleware, regenerateQRCode);
 
 // -------------------------------------------------------------------
 // GET /api/qr/download/:merchantId
-// Returns the merchant’s current QR code details
+// Returns the merchantâ€™s current QR code details
 // Params: merchantId
 // -------------------------------------------------------------------
 router.get('/download/:merchantId', downloadQRCode);

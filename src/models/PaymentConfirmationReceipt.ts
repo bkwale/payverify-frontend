@@ -38,7 +38,7 @@ class PaymentConfirmationReceipt
     public readonly updatedAt!: Date;
 
     /**
-     * Sequelize association — this receipt belongs to one payment.
+     * Sequelize association â€” this receipt belongs to one payment.
      */
     static associate() {
         this.belongsTo(Payment, {

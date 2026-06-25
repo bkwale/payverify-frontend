@@ -190,7 +190,7 @@ select.form-select {
 }
 
 .breadcrumb-item + .breadcrumb-item::before {
-    content: "›";
+    content: "â€º";
     color: #888;
 }
 

@@ -158,7 +158,7 @@ const MerchantsModal: React.FC<Props> = ({ open, onClose }) => {
                         <h5 className="mb-0">Merchants</h5>
                         <small className="opacity-75">
                             {isAdmin ? 'All merchants' : 'Your merchants'}
-                            {total ? ` • ${total.toLocaleString()} total` : ''}
+                            {total ? ` â€¢ ${total.toLocaleString()} total` : ''}
                         </small>
                     </div>
                     <div className="d-flex gap-2">
@@ -167,7 +167,7 @@ const MerchantsModal: React.FC<Props> = ({ open, onClose }) => {
                             value={search}
                             onChange={(e) => { setPage(1); setSearch(e.target.value); }}
                             className="form-control form-control-sm"
-                            placeholder="Search by name or email…"
+                            placeholder="Search by name or emailâ€¦"
                             style={{ maxWidth: 260 }}
                         />
                         <button className="btn btn-outline-light btn-sm" onClick={exportCSV}>Export CSV</button>
@@ -178,7 +178,7 @@ const MerchantsModal: React.FC<Props> = ({ open, onClose }) => {
                 {/* Body */}
                 <div className="p-3" style={{ overflow: 'auto' }}>
                     {loading ? (
-                        <p className="opacity-75 m-0">Loading merchants…</p>
+                        <p className="opacity-75 m-0">Loading merchantsâ€¦</p>
                     ) : visibleRows.length === 0 ? (
                         <p className="opacity-75 m-0">No merchants found.</p>
                     ) : (
@@ -219,7 +219,7 @@ const MerchantsModal: React.FC<Props> = ({ open, onClose }) => {
 
                             {/* Pagination */}
                             <div className="d-flex justify-content-between align-items-center">
-                                <small className="opacity-75">Page {page}{total ? ` • ${total.toLocaleString()} total` : ''}</small>
+                                <small className="opacity-75">Page {page}{total ? ` â€¢ ${total.toLocaleString()} total` : ''}</small>
                                 <div className="d-flex gap-2">
                                     <button className="btn btn-outline-light btn-sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1}>
                                         Prev

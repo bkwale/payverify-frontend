@@ -8,7 +8,7 @@ import Transaction from '../models/Transaction';
  * This controller returns dashboard statistics based on the logged-in user.
  *
  * Changes:
- *  Added support for `admin` role — admin sees global stats (all merchants combined).
+ *  Added support for `admin` role â€” admin sees global stats (all merchants combined).
  *  Merchants continue to see only their own merchant stats.
  */
 export const getDashboardStats = async (req: Request, res: Response) => {

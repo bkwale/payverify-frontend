@@ -34,7 +34,7 @@ const MerchantsPage = () => {
     const { token, user, logout } = useAuth();
     const navigate = useNavigate();
 
-    // Purpose: RBAC – decide if user is admin once and memoize.
+    // Purpose: RBAC â€“ decide if user is admin once and memoize.
     const isAdmin = useMemo(
         () => (user?.role || '').toLowerCase() === 'admin',
         [user?.role]
@@ -165,7 +165,7 @@ const MerchantsPage = () => {
                                 value={search}
                                 onChange={onSearchChange}
                                 className="form-control form-control-sm"
-                                placeholder="Search by name or email…"
+                                placeholder="Search by name or emailâ€¦"
                                 style={{ maxWidth: 260 }}
                             />
                             {/* CSV export button */}
@@ -179,7 +179,7 @@ const MerchantsPage = () => {
                     {/* Table card */}
                     <div className="pv-glass-card p-3">
                         {loading ? (
-                            <p className="opacity-75 m-0">Loading merchants…</p>
+                            <p className="opacity-75 m-0">Loading merchantsâ€¦</p>
                         ) : visibleRows.length === 0 ? (
                             <p className="opacity-75 m-0">No merchants found.</p>
                         ) : (
@@ -222,7 +222,7 @@ const MerchantsPage = () => {
                                 {/* Simple paging controls */}
                                 <div className="d-flex justify-content-between align-items-center">
                                     <small className="opacity-75">
-                                        Page {page}{total ? ` • ${total.toLocaleString()} total` : ''}
+                                        Page {page}{total ? ` â€¢ ${total.toLocaleString()} total` : ''}
                                     </small>
                                     <div className="d-flex gap-2">
                                         <button className="btn btn-outline-light btn-sm" onClick={prevPage} disabled={page <= 1}>

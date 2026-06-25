@@ -27,6 +27,6 @@ export const authorize =
                 return res.status(403).json({ message: 'Forbidden: insufficient privileges' });
             }
 
-            // All good — user is authorized
+            // All good â€” user is authorized
             next();
         };

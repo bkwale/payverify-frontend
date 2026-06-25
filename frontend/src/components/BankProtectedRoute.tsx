@@ -27,7 +27,7 @@ export default function BankProtectedRoute({ children }: { children: ReactNode }
             return;
         }
 
-        // (Optional) Soft role check so a merchant token can’t sneak in
+        // (Optional) Soft role check so a merchant token canâ€™t sneak in
         try {
             const payload = JSON.parse(atob(stored.split('.')[1] || ''));
             if (payload?.role && payload.role !== 'bank') {

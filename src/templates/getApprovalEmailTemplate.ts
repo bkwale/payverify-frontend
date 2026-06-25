@@ -6,6 +6,6 @@ export const getApprovalEmailTemplate = (bankName: string, contactPerson: string
     <p>You can now log in to your dashboard using your credentials.</p>
     <p>Welcome aboard!</p>
     <br/>
-    <p>– PayVerify Team</p>
+    <p>â€“ PayVerify Team</p>
   </div>
 `;

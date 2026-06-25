@@ -9,7 +9,7 @@
 // - Makes `name` optional in UserJwtPayload to match your token variance.
 //
 // After updating, restart your dev server AND the TypeScript server
-// (VS Code: “TypeScript: Restart TS server”).
+// (VS Code: â€œTypeScript: Restart TS serverâ€).
 // -------------------------------------------------------------
 
 import 'express';

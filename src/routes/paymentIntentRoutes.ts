@@ -264,8 +264,8 @@
 // Sending invoice email should NOT require auth.
 // This was causing:
 //
-// • 500 Internal Server Error
-// • Unauthorized toast
+// â€¢ 500 Internal Server Error
+// â€¢ Unauthorized toast
 //
 // =============================================================================
 
