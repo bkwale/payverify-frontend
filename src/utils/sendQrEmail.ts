@@ -4,7 +4,7 @@ import sgMail from '@sendgrid/mail';
 import { Merchant } from '../models/Merchant';
 import { createAuditLog } from '../services/auditService';
 
-sgMail.setApiKey(process.env.SENDGRID_API_KEY!);
+if (process.env.SENDGRID_API_KEY) sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 type EmailExtras = {
     verifyUrl?: string;
