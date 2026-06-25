@@ -73,6 +73,8 @@ import paystackWebhookRoutes
     from "./routes/paystackWebhookRoutes";
 
 import publicInvoiceRoutes from "./routes/publicInvoiceRoutes";
+import "./models/index";
+import { applyAssociations } from "./models/associations";
 
 
 
@@ -251,5 +253,8 @@ app.use(
     "/api/webhooks",
     paystackWebhookRoutes
 );
+
+// Register Sequelize model associations at startup (Vercel uses app.ts, not server.ts).
+applyAssociations();
 
 export default app;
