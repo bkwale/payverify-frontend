@@ -7,7 +7,6 @@
 
 //import { Sequelize } from 'sequelize';
 
-//// Load DB credentials from environment variables
 //const DB_NAME = process.env.DB_NAME || 'payverifydb';
 //const DB_USER = process.env.DB_USER || 'postgres';
 //const DB_PASS = process.env.DB_PASS || 'payverify';
@@ -19,7 +18,6 @@
 //    logging: false // disable SQL logging
 //});
 
-//// Utility function to test DB connection
 //export const testConnection = async () => {
 //    try {
 //        await sequelize.authenticate();
@@ -28,8 +26,6 @@
 //        console.error(' Unable to connect to the database:', error);
 //    }
 //};
-
-
 
 /**
  * Sequelize Database Configuration & Connection

@@ -1,25 +1,4 @@
 ﻿//// =============================================================================
-//// InvoicePaymentController.ts (FINAL — MODEL ALIGNED + TS CLEAN)
-//// =============================================================================
-//// PURPOSE:
-//// - Initialize Paystack payment for an invoice
-//// - Handle Paystack webhook securely
-////
-//// WHAT WAS FIXED IN THIS VERSION:
-//// ✅ Uses real Invoice fields (amount, status)
-//// ✅ Uses real Payment fields
-//// ✅ Removed non-existent columns
-//// ✅ Fixed enum mismatch (initiated vs initialized)
-//// ✅ Removed unsafe metadata usage
-//// ✅ Added safe invoiceId extraction from reference
-//// ✅ All TypeScript errors resolved
-////
-//// IMPORTANT DESIGN NOTE:
-//// Your Payment model is transaction-based, so currently:
-//// - invoice.id → transactionId (temporary mapping)
-//// - bankAccountId uses placeholder until merchant wiring
-////
-//// =============================================================================
 
 //import { Request, Response } from "express";
 //import crypto from "crypto";
@@ -29,10 +8,6 @@
 //import Payment from "../models/Payment";
 
 //const paystack = new PaystackService();
-
-//// =============================================================================
-//// Helpers
-//// =============================================================================
 
 ///**
 // * Builds deterministic Paystack reference
@@ -74,10 +49,6 @@
 //    }
 //}
 
-//// =============================================================================
-//// 1️⃣ Initialize Paystack payment for invoice
-//// POST /api/invoices/:invoiceId/paystack/initialize
-//// =============================================================================
 //export const initializeInvoicePayment = async (
 //    req: Request,
 //    res: Response
@@ -194,13 +165,6 @@
 //    }
 //};
 
-//// =============================================================================
-//// 2️⃣ Paystack Webhook Handler
-//// POST /api/webhooks/paystack
-////
-//// IMPORTANT:
-//// Must use express.raw({ type: 'application/json' })
-//// =============================================================================
 //export const handlePaystackWebhook = async (
 //    req: any,
 //    res: Response
@@ -285,8 +249,6 @@
 //    }
 //};
 
-
-
 // =============================================================================
 // InvoicePaymentController.ts (FULLY HARDENED — PAYVERIFY ELITE)
 // =============================================================================
@@ -314,7 +276,7 @@ import Payment from "../models/Payment";
 import Transaction from "../models/Transaction";
 
 import {
-    sendInvoicePaidEmail,sendPaymentFailedEmail,} from "../services/_emailService";
+    sendInvoicePaidEmail,sendPaymentFailedEmail,} from "../services/resendEmailService";
 
 const paystack = new PaystackService();
 

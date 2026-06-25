@@ -1,15 +1,5 @@
 ﻿
 
-//// src/models/Merchants.ts
-//// -----------------------------------------------------------------------------
-//// What changed & why
-//// - ❌ Removed `field: 'bankid'` on `bankId`. Your DB has "bankId" (camelCase).
-////   Keeping that mapping made Sequelize query "bankid" AS "bankId" and Postgres
-////   threw 42703 (column does not exist).
-//// - ✅ status is a strict union type everywhere to prevent invalid strings.
-//// - ✅ bankId remains INTEGER NULL with FK semantics (safe for existing rows).
-//// -----------------------------------------------------------------------------
-
 //import { Model, DataTypes, Optional, Association } from 'sequelize';
 //import { sequelize } from '../config/db';
 //import { User } from './User';
@@ -128,38 +118,7 @@
 //    }
 //);
 
-//// (Optional) If you maintain associations elsewhere, keep them there.
-//// Merchant.belongsTo(User, { foreignKey: 'userId', as: 'user' });
-
 //export default Merchant;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // src/models/Merchant.ts
 // -----------------------------------------------------------------------------

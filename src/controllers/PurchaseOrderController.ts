@@ -1,28 +1,10 @@
 ﻿//// src/controllers/PurchaseOrderController.ts
-//// =============================================================================
-//// PurchaseOrderController (FINAL STABLE VERSION)
-////
-//// FIXES INCLUDED:
-//// ------------------------------------------------------------
-//// ✅ Invoice creation on PO approval (CRITICAL FIX)
-//// ✅ Added missing methods required by routes:
-////      - getPurchaseOrderStats
-////      - updatePurchaseOrder
-//// ✅ Prevents "Invoice not found"
-//// ✅ Prevents TS route errors
-//// ✅ No architecture changes (safe patch)
-////
-//// FLOW NOW:
-//// PurchaseOrder → Approved → PaymentIntent → Invoice (IMMEDIATE)
-////
-//// =============================================================================
 
 //import { Request, Response } from 'express';
 //import { PurchaseOrderService } from '../services/PurchaseOrderService';
 //import { PaymentIntentService } from '../services/PaymentIntentService';
 //import { validationResult } from 'express-validator';
 
-//// 🔥 NEW (for invoice creation)
 //import { Invoice } from '../models/Invoice';
 //import crypto from 'crypto';
 
@@ -409,36 +391,11 @@
 //    };
 //}
 
-
-
-
-
-
-//// src/controllers/PurchaseOrderController.ts
-//// =============================================================================
-//// PurchaseOrderController (FINAL STABLE VERSION)
-////
-//// FIXES INCLUDED:
-//// ------------------------------------------------------------
-//// ✅ Invoice creation on PO approval (CRITICAL FIX)
-//// ✅ Added missing methods required by routes:
-////      - getPurchaseOrderStats
-////      - updatePurchaseOrder
-//// ✅ Prevents "Invoice not found"
-//// ✅ Prevents TS route errors
-//// ✅ No architecture changes (safe patch)
-////
-//// FLOW NOW:
-//// PurchaseOrder → Approved → PaymentIntent → Invoice (IMMEDIATE)
-////
-//// =============================================================================
-
 //import { Request, Response } from 'express';
 //import { PurchaseOrderService } from '../services/PurchaseOrderService';
 //import { PaymentIntentService } from '../services/PaymentIntentService';
 //import { validationResult } from 'express-validator';
 
-//// 🔥 NEW (for invoice creation)
 //import { Invoice } from '../models/Invoice';
 //import crypto from 'crypto';
 
@@ -824,7 +781,6 @@
 //        }
 //    };
 //}
-
 
 // =============================================================================
 // PurchaseOrderController (FULL FIXED VERSION)

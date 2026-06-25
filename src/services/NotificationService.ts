@@ -1,14 +1,4 @@
 ﻿//// =============================================================================
-//// NotificationService
-//// =============================================================================
-////
-//// PURPOSE
-//// Sends Email and/or SMS payment notifications
-////
-//// UPDATED FIX
-//// Added optional qrUrl to support embedded QR in email
-////
-//// =============================================================================
 
 //import sgMail from '@sendgrid/mail';
 
@@ -24,7 +14,6 @@
 
 //    qrUrl?: string;  // ✅ FIXED: Added optional QR support
 //};
-
 
 //export class NotificationService {
 
@@ -42,7 +31,6 @@
 
 //        sgMail.setApiKey(apiKey);
 //    }
-
 
 //    // =============================================================================
 //    // Send Payment Notification (Email)
@@ -64,14 +52,11 @@
 
 //        } = payload;
 
-
 //        if (!email)
 //            return;
 
-
 //        const formattedAmount =
 //            Number(amount).toLocaleString();
-
 
 //        const msg = {
 
@@ -128,11 +113,9 @@
 //            `
 //        };
 
-
 //        await sgMail.send(msg);
 //    }
 //}
-
 
 // =============================================================================
 // NotificationService (FIXED VERSION)
@@ -174,13 +157,11 @@ export class NotificationService {
 
         if (!apiKey) {
 
-            console.error(
-                "SENDGRID_API_KEY missing from environment"
+            console.warn(
+                "[NotificationService] SENDGRID_API_KEY missing — email notifications disabled"
             );
 
-            throw new Error(
-                "Email service not configured"
-            );
+            return; // fail soft: don't crash boot when email isn't configured
         }
 
         sgMail.setApiKey(apiKey);
@@ -189,7 +170,6 @@ export class NotificationService {
             "SendGrid initialized successfully"
         );
     }
-
 
     // =============================================================================
     // Send Payment Notification
@@ -213,7 +193,6 @@ export class NotificationService {
 
             } = payload;
 
-
             if (!email) {
 
                 console.warn(
@@ -222,7 +201,6 @@ export class NotificationService {
 
                 return;
             }
-
 
             const sender =
                 process.env.NOTIFY_FROM_EMAIL;
@@ -234,14 +212,11 @@ export class NotificationService {
                 );
             }
 
-
             const formattedAmount =
                 Number(amount).toLocaleString();
 
-
             const sandboxMode =
                 process.env.SENDGRID_SANDBOX === "true";
-
 
             const msg: sgMail.MailDataRequired = {
 
@@ -300,16 +275,13 @@ export class NotificationService {
 
             };
 
-
             console.log(
                 "Sending email to:",
                 email
             );
 
-
             const response =
                 await sgMail.send(msg);
-
 
             console.log(
                 "SendGrid success:",

@@ -1,39 +1,4 @@
 ﻿//// =============================================================================
-//// PaymentIntentController.ts
-//// =============================================================================
-////
-//// PURPOSE
-//// Handles:
-////
-//// 1) Public retrieval of PaymentIntent via token
-////    GET /api/payment-intents/public/:token
-////
-//// 2) Sending payment link via email (SendGrid)
-////    POST /api/payment-intents/send-link
-////
-//// 3) Marking payment as paid (simulation or webhook)
-////    POST /api/payment-intents/:id/mark-paid
-////
-//// 4) NEW — Initialize Paystack payment (PUBLIC)
-////    POST /api/payment-intents/paystack/init/:token
-////
-//// DESIGN PRINCIPLES
-////
-//// • SRP compliant
-//// • Backward compatible (NO breaking changes)
-//// • Safe validation
-//// • Production-ready structure
-////
-//// FIXES APPLIED
-////
-//// ✅ FIX #1: Paystack method properly placed INSIDE class
-////            (this was causing your 18 TS errors)
-////
-//// ✅ FIX #2: Defensive token + id validation
-////
-//// ✅ FIX #3: Safe numeric handling for amount
-////
-//// =============================================================================
 
 //import { Request, Response } from "express";
 
@@ -263,8 +228,6 @@
 //    }
 //  };
 //}
-
-
 
 // =============================================================================
 // PaymentIntentController.ts

@@ -1,16 +1,4 @@
 ﻿//// src/models/PurchaseOrderItem.ts
-//// ------------------------------------------------------------------------------------
-//// FINAL VERSION MATCHING ACTUAL DATABASE SCHEMA EXACTLY
-////
-//// This version maps ALL fields correctly using `field`
-//// so Sequelize aligns perfectly with PostgreSQL.
-////
-//// This prevents:
-////
-//// ✔ column does not exist errors
-//// ✔ index creation failures
-//// ✔ sync crashes
-//// ------------------------------------------------------------------------------------
 
 //import {
 //    Model,
@@ -19,10 +7,6 @@
 //} from 'sequelize';
 
 //import { sequelize } from '../config/db';
-
-//// ------------------------------------------------------------------------------------
-//// ATTRIBUTES INTERFACE
-//// ------------------------------------------------------------------------------------
 
 //export interface PurchaseOrderItemAttributes {
 
@@ -53,10 +37,6 @@
 //        'id'
 //    > { }
 
-//// ------------------------------------------------------------------------------------
-//// MODEL CLASS
-//// ------------------------------------------------------------------------------------
-
 //export class PurchaseOrderItem extends Model<
 //    PurchaseOrderItemAttributes,
 //    PurchaseOrderItemCreationAttributes
@@ -83,10 +63,6 @@
 
 //    public readonly updatedAt!: Date;
 //}
-
-//// ------------------------------------------------------------------------------------
-//// INIT MODEL
-//// ------------------------------------------------------------------------------------
 
 //PurchaseOrderItem.init({
 
@@ -173,7 +149,6 @@
 
 //        ]
 //    });
-
 
 // src/models/PurchaseOrderItem.ts
 
@@ -322,4 +297,3 @@ PurchaseOrderItem.init({
         timestamps: true,
         underscored: true,
     });
-
