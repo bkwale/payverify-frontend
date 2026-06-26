@@ -47,7 +47,7 @@ const {
     DATABASE_URL,
     DB_NAME = 'payverifydb',
     DB_USER = 'postgres',
-    DB_PASS = 'Payverify123!',
+    DB_PASS = '',
     DB_HOST = 'localhost',
     NODE_ENV,
 } = process.env;

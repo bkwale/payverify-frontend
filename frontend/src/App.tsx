@@ -36,6 +36,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import InvoicePayPage from './pages/InvoicePayPage';
 import PurchaseOrderDetailsPage from './pages/PurchaseOrderDetailsPage';
+import PaymentSuccessPage from './pages/PaymentSuccessPage';
 
 
 const App = () => {
@@ -78,6 +79,7 @@ const App = () => {
                    PUBLIC ROUTES
                 ============================================================================= */}
                 <Route path="/login" element={<LoginPage />} />
+                <Route path="/payment-success" element={<PaymentSuccessPage />} />
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/register-user" element={<UserRegistration />} />
                 <Route path="/register-bank" element={<BankRegistrationForm />} />

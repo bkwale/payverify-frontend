@@ -75,6 +75,7 @@ import paystackWebhookRoutes
 import publicInvoiceRoutes from "./routes/publicInvoiceRoutes";
 import "./models/index";
 import { applyAssociations } from "./models/associations";
+import { mountSwagger } from './config/swagger';
 
 
 
@@ -253,6 +254,9 @@ app.use(
     "/api/webhooks",
     paystackWebhookRoutes
 );
+
+// API docs (Swagger)
+app.use('/api-docs', mountSwagger());
 
 // Register Sequelize model associations at startup (Vercel uses app.ts, not server.ts).
 applyAssociations();
