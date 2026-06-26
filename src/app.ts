@@ -256,7 +256,11 @@ app.use(
 );
 
 // API docs (Swagger)
-app.use('/api-docs', mountSwagger());
+try {
+    app.use('/api-docs', mountSwagger());
+} catch (err) {
+    console.warn('[swagger] /api-docs unavailable:', (err as Error).message);
+}
 
 // Register Sequelize model associations at startup (Vercel uses app.ts, not server.ts).
 applyAssociations();
