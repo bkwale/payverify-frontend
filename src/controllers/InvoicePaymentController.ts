@@ -409,7 +409,7 @@ export const initializeInvoicePayment = async (
             status: "initiated",
         });
 
-        const callbackUrl = `${process.env.FRONTEND_URL}/invoice/pay/${invoiceId}`;
+        const callbackUrl = `${process.env.FRONTEND_URL}/invoice-pay/${invoiceId}`;
 
         const response = await paystack.initializePayment({
             email: customerEmail,
@@ -549,7 +549,7 @@ export const handlePaystackWebhook = async (
                         invoice.customer_email,
                         invoice.id,
                         Number(invoice.amount),
-                        `${process.env.FRONTEND_URL}/invoice/pay/${invoice.id}`
+                        `${process.env.FRONTEND_URL}/invoice-pay/${invoice.id}`
                     );
                 }
             }

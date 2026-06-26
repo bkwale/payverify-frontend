@@ -442,7 +442,7 @@ export class InvoiceController {
                     amountNaira: Number(invoice.amount),// ✅ keep value, change key
                     reference: invoice.public_token,
                     /*callback_url: `${process.env.FRONTEND_URL}/payment-success`,*/
-                    callback_url: "http://localhost:5173/payment-success",
+                    callback_url: `${process.env.FRONTEND_URL || ""}/payment-success`,
                 });
             }
 
