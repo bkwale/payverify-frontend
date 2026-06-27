@@ -454,6 +454,7 @@ Stats: ${JSON.stringify(stats)}
         });
     } catch (err) {
         console.error('[getAiInsights] error:', err);
-        return res.status(500).json({ message: 'Failed to generate AI insights' });
+        // Fail soft: panel hides on 501 (covers quota/billing/transient errors)
+        return res.status(501).json({ message: 'AI insights temporarily unavailable' });
     }
 }

@@ -367,6 +367,13 @@ export const initializeInvoicePayment = async (
             });
         }
 
+        if (!invoice.merchant_id) {
+            return res.status(400).json({
+                success: false,
+                message: "Invoice has no merchant assigned — cannot process payment",
+            });
+        }
+
         // ---------------------------------------------------------------------
         // Persist customer email (for receipts)
         // ---------------------------------------------------------------------
@@ -434,9 +441,15 @@ export const initializeInvoicePayment = async (
             error?.response?.data || error
         );
 
+        const reason =
+            error?.response?.data?.message ||
+            error?.message ||
+            "unknown error";
+
         return res.status(500).json({
             success: false,
             message: "Unable to initialize payment",
+            reason,
         });
     }
 };
