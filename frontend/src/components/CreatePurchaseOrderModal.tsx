@@ -2152,6 +2152,8 @@ const CreatePurchaseOrderModal: React.FC<Props> = ({
     const [loading, setLoading] = useState(false);
 
     // Persist form state across modal remounts
+    const [merchants, setMerchants] = useState<{ id: number; name: string }[]>([]);
+
     const formCacheRef = useRef<PurchaseOrderFormData | null>(null);
 
     const [formData, setFormData] = useState<PurchaseOrderFormData>(() => {
@@ -2187,6 +2189,23 @@ const CreatePurchaseOrderModal: React.FC<Props> = ({
     useEffect(() => {
         formCacheRef.current = formData;
     }, [formData]);
+
+    useEffect(() => {
+        if (!open) return;
+        api.get('/merchants?scope=' + (isAdmin ? 'all' : 'self'), {
+            headers: { Authorization: `Bearer ${token}` },
+        })
+            .then(res => {
+                const list = (res.data || []).map((m: any) => ({ id: m.id, name: m.name }));
+                setMerchants(list);
+                setFormData(prev =>
+                    prev.merchantId
+                        ? prev
+                        : { ...prev, merchantId: list.length ? String(list[0].id) : '' }
+                );
+            })
+            .catch(() => setMerchants([]));
+    }, [open]);
 
     // ----------------------------------------------------------------------------------
     // Calculate total
@@ -2405,7 +2424,7 @@ const CreatePurchaseOrderModal: React.FC<Props> = ({
                                 Merchant ID
                             </Form.Label>
 
-                            <Form.Control
+                            <Form.Select
                                 className="pv-input"
                                 value={formData.merchantId}
                                 onChange={e =>
@@ -2414,8 +2433,14 @@ const CreatePurchaseOrderModal: React.FC<Props> = ({
                                         merchantId: e.target.value
                                     })
                                 }
-                                disabled={!isAdmin}
-                            />
+                            >
+                                <option value="">Select a merchant…</option>
+                                {merchants.map(m => (
+                                    <option key={m.id} value={m.id}>
+                                        {m.name} (#{m.id})
+                                    </option>
+                                ))}
+                            </Form.Select>
 
                         </Form.Group>
 

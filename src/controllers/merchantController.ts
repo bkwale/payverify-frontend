@@ -56,9 +56,14 @@ export const getMerchantById = async (req: Request, res: Response) => {
 // GET /api/merchants
 // (Unscoped list; add WHERE userId=... if you want to scope by user.)
 // -----------------------------------------------------------------------------
-export const getAllMerchants = async (_req: Request, res: Response) => {
+export const getAllMerchants = async (req: Request, res: Response) => {
     try {
-        const merchants = await Merchant.findAll();
+        const authUserId = Number((req as any)?.user?.id ?? (req as any)?.userId);
+        const role = (req as any)?.user?.role;
+        const scope = (req.query.scope as string) || 'self';
+        const where =
+            scope === 'all' && role === 'admin' ? {} : { userId: authUserId };
+        const merchants = await Merchant.findAll({ where });
         return res.status(200).json(merchants);
     } catch (error) {
         console.error('Error fetching merchants:', error);

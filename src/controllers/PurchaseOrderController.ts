@@ -801,6 +801,7 @@ import { PurchaseOrderService } from '../services/PurchaseOrderService';
 import { PaymentIntentService } from '../services/PaymentIntentService';
 import { validationResult } from 'express-validator';
 import { Invoice } from '../models/Invoice';
+import { Merchant } from '../models/Merchant';
 import crypto from 'crypto';
 
 export class PurchaseOrderController {
@@ -888,8 +889,21 @@ export class PurchaseOrderController {
             const page = Number(req.query.page) || 1;
             const limit = Number(req.query.limit) || 100;
 
+            const scope = (req.query.scope as string) || 'self';
+            const authUserId = Number((req as any)?.user?.id ?? (req as any)?.userId);
+            const role = (req as any)?.user?.role;
+            let filter: any = {};
+            if (!(scope === 'all' && role === 'admin')) {
+                const mine = await Merchant.findAll({
+                    where: { userId: authUserId },
+                    attributes: ['id'],
+                });
+                const ids = mine.map((m: any) => m.id);
+                filter = { merchantId: ids.length ? ids : [-1] };
+            }
+
             const result =
-                await this.purchaseOrderService.getAllPurchaseOrders({}, page, limit);
+                await this.purchaseOrderService.getAllPurchaseOrders(filter, page, limit);
 
             res.json({
                 success: true,

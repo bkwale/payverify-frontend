@@ -65,7 +65,7 @@ const CreateTransactionForm = ({ onTransactionCreated }: Props) => {
 
         setLoadingMerchants(true);
 
-        api.get('/me/merchants', { headers: { Authorization: `Bearer ${token}` } })
+        api.get('/merchants?scope=self', { headers: { Authorization: `Bearer ${token}` } })
             .then((res) => {
                 // Map API response to lightweight merchant list
                 const list: MerchantLite[] = (res.data || []).map((m: any) => ({
