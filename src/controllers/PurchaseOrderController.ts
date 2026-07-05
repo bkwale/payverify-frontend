@@ -984,14 +984,20 @@ export class PurchaseOrderController {
 
         try {
 
-            // Safe fallback (no breaking)
-            res.json({
-                success: true,
-                data: {
-                    totalOrders: 0,
-                    totalAmount: 0
-                }
-            });
+            const scope = (req.query.scope as string) || 'self';
+            const authUserId = Number((req as any)?.user?.id ?? (req as any)?.userId);
+            const role = (req as any)?.user?.role;
+            let filter: any = {};
+            if (!(scope === 'all' && role === 'admin')) {
+                const mine = await Merchant.findAll({
+                    where: { userId: authUserId },
+                    attributes: ['id'],
+                });
+                const ids = mine.map((m: any) => m.id);
+                filter = { merchantId: ids.length ? ids : [-1] };
+            }
+            const stats = await this.purchaseOrderService.getPurchaseOrderStats(filter);
+            res.json({ success: true, ...stats });
 
         } catch (err: any) {
             res.status(500).json({ message: err.message });

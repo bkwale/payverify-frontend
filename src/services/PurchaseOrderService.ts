@@ -509,26 +509,41 @@ export class PurchaseOrderService {
     // =============================================================================
     // STATS
     // =============================================================================
-    async getPurchaseOrderStats() {
+    async getPurchaseOrderStats(filter: any = {}) {
         const { PurchaseOrder } = this.models;
 
-        const totalOrders = await PurchaseOrder.count();
-        const totalValue =
-            (await PurchaseOrder.sum("totalAmount")) || 0;
+        const totalOrders = await PurchaseOrder.count({ where: filter });
+        const totalAmount =
+            (await PurchaseOrder.sum("totalAmount", { where: filter })) || 0;
 
         const pending = await PurchaseOrder.count({
-            where: { status: "pending" },
+            where: { ...filter, status: "pending" },
         });
-
+        const approved = await PurchaseOrder.count({
+            where: { ...filter, status: "approved" },
+        });
+        const rejected = await PurchaseOrder.count({
+            where: { ...filter, status: "cancelled" },
+        });
         const completed = await PurchaseOrder.count({
-            where: { status: "completed" },
+            where: { ...filter, status: ["paid", "delivered", "completed"] },
         });
+        const pendingAmount =
+            (await PurchaseOrder.sum("totalAmount", {
+                where: { ...filter, status: "pending" },
+            })) || 0;
 
         return {
+            total: totalOrders,
             totalOrders,
-            totalValue,
+            totalAmount,
+            totalValue: totalAmount,
             pending,
+            pendingOrders: pending,
+            approved,
+            rejected,
             completed,
+            pendingAmount,
         };
     }
 }

@@ -260,7 +260,7 @@ function useMyMerchants(enabled: boolean, token?: string) {
         if (!enabled) return;
         (async () => {
             try {
-                const res = await api.get('/me/merchants', {
+                const res = await api.get('/merchants?scope=self', {
                     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
                 });
                 const list: MerchantLite[] = (res.data || []).map((m: any) => ({

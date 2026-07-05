@@ -2039,6 +2039,7 @@ import { useAuth } from '../contexts/AuthContext';
  * ============================================================================
  */
 import PaymentRequestModal from './PaymentRequestModal';
+import { useNavigate } from 'react-router-dom';
 
 /**
  * ============================================================================
@@ -2096,6 +2097,7 @@ const PurchaseOrdersModal: React.FC<PurchaseOrdersModalProps> = ({
      * ============================================================================
      */
     const { token } = useAuth();
+    const navigate = useNavigate();
 
     /**
      * ============================================================================
@@ -2500,7 +2502,12 @@ const PurchaseOrdersModal: React.FC<PurchaseOrdersModalProps> = ({
                                 <tr key={po.id}>
 
                                     <td>
-                                        PO-{po.poNumber}
+                                        <span
+                                            style={{ cursor: 'pointer', textDecoration: 'underline' }}
+                                            onClick={() => { onClose(); navigate(`/purchase-orders/${po.id}`); }}
+                                        >
+                                            PO-{po.poNumber}
+                                        </span>
                                     </td>
 
                                     {isAdmin && (
