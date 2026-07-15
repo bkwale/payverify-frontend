@@ -703,12 +703,12 @@ const DashboardPage = () => {
                                 style={{ cursor: 'pointer', border: 'none', background: 'transparent' }}
                             >
                                 <div className="pv-card-body">
-                                    <div className="pv-tile-title">Merchants</div>
+                                    <div className="pv-tile-title">{isAdmin ? 'Merchants' : 'My Businesses'}</div>
                                     <div className="pv-tile-value">
                                         {merchantsCount == null ? '—' : merchantsCount.toLocaleString()}
                                     </div>
                                     <div className="pv-tile-desc">
-                                        {isAdmin ? 'View all merchants' : 'View your merchants'}
+                                        {isAdmin ? 'View all merchants' : 'View your businesses'}
                                     </div>
                                 </div>
                             </button>
