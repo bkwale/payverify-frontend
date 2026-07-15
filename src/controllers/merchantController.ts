@@ -143,6 +143,10 @@ export const createMerchant = async (req: Request, res: Response) => {
         account_number,
         bank_name,
         email,             // ← required
+        contact_name,
+        phone,
+        business_address,
+        business_type,
     } = req.body;
 
     // 1) Validate presence
@@ -187,6 +191,10 @@ export const createMerchant = async (req: Request, res: Response) => {
             account_number,
             bank_name,
             email,
+            contact_name: contact_name ?? null,
+            phone: phone ?? null,
+            business_address: business_address ?? null,
+            business_type: business_type ?? null,
         });
 
         // 5) Build QR payload (mask account number)
@@ -265,4 +273,59 @@ export const createMerchant = async (req: Request, res: Response) => {
         return res.status(500).json({ message: error?.message || 'Failed to create merchant' });
     }
 
+};
+
+
+// =============================================================================
+// AGENTS (sub-users under a merchant)
+// POST /api/merchants/:id/agents  — create an agent
+// GET  /api/merchants/:id/agents  — list agents
+// =============================================================================
+export const createAgent = async (req: Request, res: Response) => {
+    try {
+        const merchantId = Number(req.params.id);
+        const { name, email, phone, password, role } = req.body || {};
+        if (!email || !password) {
+            return res.status(400).json({ message: 'Email and password are required' });
+        }
+        const merchant = await Merchant.findByPk(merchantId);
+        if (!merchant) return res.status(404).json({ message: 'Merchant not found' });
+        const authUserId = Number((req as any)?.user?.id ?? (req as any)?.userId);
+        if (Number(merchant.userId) !== authUserId) {
+            return res.status(403).json({ message: 'You do not own this merchant' });
+        }
+        const existing = await User.findOne({ where: { email } });
+        if (existing) return res.status(409).json({ message: 'A user with this email already exists' });
+        const agent = await User.create({
+            email,
+            password,
+            role: role || 'agent',
+            name: name ?? null,
+            phone: phone ?? null,
+            merchant_id: merchantId,
+        } as any);
+        return res.status(201).json({
+            success: true,
+            agent: { id: agent.id, email: agent.email, name: agent.name ?? null, phone: agent.phone ?? null, role: agent.role, merchant_id: merchantId },
+        });
+    } catch (err: any) {
+        return res.status(500).json({ message: err.message });
+    }
+};
+
+export const listAgents = async (req: Request, res: Response) => {
+    try {
+        const merchantId = Number(req.params.id);
+        const authUserId = Number((req as any)?.user?.id ?? (req as any)?.userId);
+        const merchant = await Merchant.findByPk(merchantId);
+        if (!merchant) return res.status(404).json({ message: 'Merchant not found' });
+        if (Number(merchant.userId) !== authUserId) return res.status(403).json({ message: 'Forbidden' });
+        const agents = await User.findAll({
+            where: { merchant_id: merchantId, role: 'agent' },
+            attributes: ['id', 'email', 'name', 'phone', 'role'],
+        });
+        return res.json({ success: true, agents });
+    } catch (err: any) {
+        return res.status(500).json({ message: err.message });
+    }
 };

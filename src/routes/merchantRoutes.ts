@@ -5,6 +5,8 @@ import {
     getMerchantById,
     getMerchantCount,   // ✅ new export
     createMerchant,
+    createAgent,
+    listAgents,
 } from '../controllers/merchantController';
 import { verifyJwtMiddleware } from '../middlewares/authMiddleware';
 
@@ -115,5 +117,8 @@ router.get('/:id', verifyJwtMiddleware, getMerchantById);
  *         description: Duplicate CAC number
  */
 router.post('/', verifyJwtMiddleware, createMerchant);
+
+router.post('/:id/agents', verifyJwtMiddleware, createAgent);
+router.get('/:id/agents', verifyJwtMiddleware, listAgents);
 
 export default router;

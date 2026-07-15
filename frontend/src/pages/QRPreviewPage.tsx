@@ -30,16 +30,16 @@ const QRPreviewPage: React.FC = () => {
         <>
             <Navbar />
             <div className="container mt-5">
-                <h2>QR Code Token Preview</h2>
-                <p className="text-muted">Paste a valid QR token to verify and preview merchant details.</p>
+                <h2>Verify a Merchant QR</h2>
+                <p className="text-muted">Paste the token from a merchant&rsquo;s PayVerify verification QR (or the <code>/verify/&hellip;</code> link they shared). Every verified merchant is issued this token when they register &mdash; we&rsquo;ll confirm the business identity and show the verified account details.</p>
 
                 <div className="mb-3">
-                    <label htmlFor="tokenInput" className="form-label">JWT Token:</label>
+                    <label htmlFor="tokenInput" className="form-label">Merchant QR Token</label>
                     <textarea
                         id="tokenInput"
                         className="form-control"
                         rows={4}
-                        placeholder="Paste JWT token here"
+                        placeholder="Paste the token from the merchant\u2019s PayVerify QR / verify link"
                         value={token}
                         onChange={(e) => setToken(e.target.value)}
                     />

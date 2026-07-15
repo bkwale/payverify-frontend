@@ -1,0 +1,489 @@
+diff --git a/frontend/src/App.tsx b/frontend/src/App.tsx
+index 09f6dfe..11b2c24 100644
+--- a/frontend/src/App.tsx
++++ b/frontend/src/App.tsx
+@@ -16,6 +16,7 @@ import PaymentPage from './pages/PaymentPage';
+ // existing imports…
+ import LoginPage from './pages/LoginPage';
+ import RegisterPage from './pages/RegisterPage';
++import AddAgentPage from './pages/AddAgentPage';
+ import DashboardPage from './pages/DashboardPage';
+ import TransactionsPage from './pages/TransactionsPage';
+ import ProtectedRoute from './components/ProtectedRoute';
+@@ -81,6 +82,7 @@ const App = () => {
+                 <Route path="/login" element={<LoginPage />} />
+                 <Route path="/payment-success" element={<PaymentSuccessPage />} />
+                 <Route path="/register" element={<RegisterPage />} />
++                <Route path="/add-agent" element={<AddAgentPage />} />
+                 <Route path="/register-user" element={<UserRegistration />} />
+                 <Route path="/register-bank" element={<BankRegistrationForm />} />
+                 <Route path="/bank-login" element={<BankLoginPage />} />
+diff --git a/frontend/src/components/CreatePurchaseOrderModal.tsx b/frontend/src/components/CreatePurchaseOrderModal.tsx
+index 9f01b1e..74e0966 100644
+--- a/frontend/src/components/CreatePurchaseOrderModal.tsx
++++ b/frontend/src/components/CreatePurchaseOrderModal.tsx
+@@ -2297,7 +2297,7 @@ const CreatePurchaseOrderModal: React.FC<Props> = ({
+                     }))
+             };
+ 
+-            await api.post(
++            const poRes = await api.post(
+                 "/purchase-orders",
+                 payload,
+                 {
+@@ -2318,6 +2318,24 @@ const CreatePurchaseOrderModal: React.FC<Props> = ({
+ 
+             onClose();
+ 
++            // Proceed to checkout: mint a pay link from the new PO and open the pay page
++            try {
++                const poId = poRes?.data?.data?.id ?? poRes?.data?.id;
++                if (poId) {
++                    const co = await api.post(
++                        `/purchase-orders/${poId}/checkout`,
++                        {},
++                        { headers: { Authorization: `Bearer ${token}` } }
++                    );
++                    const payToken = co?.data?.token;
++                    if (payToken) {
++                        window.location.href = `/pay/${payToken}`;
++                    }
++                }
++            } catch {
++                /* checkout is best-effort; the PO is already created */
++            }
++
+         }
+         catch (error: any) {
+ 
+diff --git a/frontend/src/components/Navbar.tsx b/frontend/src/components/Navbar.tsx
+index b4a4399..b552477 100644
+--- a/frontend/src/components/Navbar.tsx
++++ b/frontend/src/components/Navbar.tsx
+@@ -64,6 +64,7 @@ const Navbar = () => {
+                         </li>
+                         <li className="nav-item">
+                             <Link className={isActive('/register')} to="/register">Register</Link>
++                            <Link className={isActive('/add-agent')} to="/add-agent">Add Agent</Link>
+                         </li>
+                     </ul>
+ 
+diff --git a/frontend/src/pages/AddAgentPage.tsx b/frontend/src/pages/AddAgentPage.tsx
+new file mode 100644
+index 0000000..61972e3
+--- /dev/null
++++ b/frontend/src/pages/AddAgentPage.tsx
+@@ -0,0 +1,94 @@
++// Add Agent (sub-user under the logged-in merchant)
++import { useEffect, useState } from 'react';
++import api from '../services/api';
++
++type Agent = { id: number; email: string; name?: string | null; phone?: string | null; role: string };
++
++export default function AddAgentPage() {
++    const token = localStorage.getItem('token');
++    const [merchantId, setMerchantId] = useState<number | null>(null);
++    const [merchantName, setMerchantName] = useState<string>('');
++    const [agents, setAgents] = useState<Agent[]>([]);
++    const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', role: 'agent' });
++    const [busy, setBusy] = useState(false);
++    const [msg, setMsg] = useState<string | null>(null);
++    const [err, setErr] = useState<string | null>(null);
++
++    const auth = { headers: { Authorization: `Bearer ${token}` } };
++
++    const loadMerchant = async () => {
++        try {
++            const res = await api.get('/merchants?scope=self', auth);
++            const m = (res.data || [])[0];
++            if (m) { setMerchantId(m.id); setMerchantName(m.name); loadAgents(m.id); }
++        } catch { /* ignore */ }
++    };
++    const loadAgents = async (mid: number) => {
++        try { const r = await api.get(`/merchants/${mid}/agents`, auth); setAgents(r.data?.agents || []); }
++        catch { setAgents([]); }
++    };
++    useEffect(() => { loadMerchant(); /* eslint-disable-next-line */ }, []);
++
++    const up = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
++        setForm(s => ({ ...s, [k]: e.target.value }));
++
++    const submit = async (e: React.FormEvent) => {
++        e.preventDefault(); setErr(null); setMsg(null);
++        if (!merchantId) { setErr('No merchant found for your account. Register a merchant first.'); return; }
++        if (!form.name.trim()) { setErr('Agent name is required.'); return; }
++        if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) { setErr('Valid email is required.'); return; }
++        if (!form.phone.trim()) { setErr('Phone number is required.'); return; }
++        if (form.password.length < 6) { setErr('Password must be at least 6 characters.'); return; }
++        try {
++            setBusy(true);
++            await api.post(`/merchants/${merchantId}/agents`, {
++                name: form.name.trim(), email: form.email.trim(),
++                phone: form.phone.trim(), password: form.password, role: form.role,
++            }, auth);
++            setMsg(`Agent "${form.name.trim()}" added under ${merchantName}.`);
++            setForm({ name: '', email: '', phone: '', password: '', role: 'agent' });
++            loadAgents(merchantId);
++        } catch (e: any) {
++            setErr(e?.response?.data?.message || 'Failed to add agent.');
++        } finally { setBusy(false); }
++    };
++
++    return (
++        <div style={{ maxWidth: 720, margin: '40px auto', padding: '0 20px', color: '#e8f1ff' }}>
++            <h1 style={{ marginBottom: 4 }}>Add Agent</h1>
++            <p style={{ opacity: .8, marginTop: 0 }}>
++                Create a staff/agent account under {merchantName ? <b>{merchantName}</b> : 'your merchant'}. Agents log in with their own email and password.
++            </p>
++            <form onSubmit={submit} style={{ display: 'grid', gap: 12, background: '#0f1b2f', padding: 20, borderRadius: 12, border: '1px solid rgba(255,255,255,.12)' }}>
++                <label>Full Name<input value={form.name} onChange={up('name')} placeholder="Agent full name" style={inp} /></label>
++                <label>Email<input value={form.email} onChange={up('email')} placeholder="agent@business.com" style={inp} /></label>
++                <label>Phone<input value={form.phone} onChange={up('phone')} placeholder="0803 000 0000" style={inp} /></label>
++                <label>Password<input type="password" value={form.password} onChange={up('password')} placeholder="Set a password (min 6)" style={inp} /></label>
++                <label>Role
++                    <select value={form.role} onChange={up('role')} style={inp}>
++                        <option value="agent">Agent</option>
++                        <option value="cashier">Cashier</option>
++                        <option value="manager">Manager</option>
++                    </select>
++                </label>
++                {err && <div style={{ color: '#ff9a9a' }}>{err}</div>}
++                {msg && <div style={{ color: '#8ef0b0' }}>{msg}</div>}
++                <button disabled={busy} style={btn}>{busy ? 'Adding…' : 'Add Agent'}</button>
++            </form>
++
++            <h3 style={{ marginTop: 28 }}>Agents ({agents.length})</h3>
++            {agents.length === 0 ? <p style={{ opacity: .7 }}>No agents yet.</p> : (
++                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
++                    <thead><tr style={{ textAlign: 'left', opacity: .7 }}><th>Name</th><th>Email</th><th>Phone</th><th>Role</th></tr></thead>
++                    <tbody>{agents.map(a => (
++                        <tr key={a.id} style={{ borderTop: '1px solid rgba(255,255,255,.1)' }}>
++                            <td>{a.name || '—'}</td><td>{a.email}</td><td>{a.phone || '—'}</td><td>{a.role}</td>
++                        </tr>
++                    ))}</tbody>
++                </table>
++            )}
++        </div>
++    );
++}
++const inp: React.CSSProperties = { display: 'block', width: '100%', marginTop: 4, padding: '10px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,.2)', background: '#0a0f19', color: '#e8f1ff' };
++const btn: React.CSSProperties = { padding: '12px', borderRadius: 999, border: 'none', background: '#2a7bff', color: '#fff', fontWeight: 700, cursor: 'pointer' };
+diff --git a/frontend/src/pages/QRPreviewPage.tsx b/frontend/src/pages/QRPreviewPage.tsx
+index 4a263bf..339c521 100644
+--- a/frontend/src/pages/QRPreviewPage.tsx
++++ b/frontend/src/pages/QRPreviewPage.tsx
+@@ -30,16 +30,16 @@ const QRPreviewPage: React.FC = () => {
+         <>
+             <Navbar />
+             <div className="container mt-5">
+-                <h2>QR Code Token Preview</h2>
+-                <p className="text-muted">Paste a valid QR token to verify and preview merchant details.</p>
++                <h2>Verify a Merchant QR</h2>
++                <p className="text-muted">Paste the token from a merchant&rsquo;s PayVerify verification QR (or the <code>/verify/&hellip;</code> link they shared). Every verified merchant is issued this token when they register &mdash; we&rsquo;ll confirm the business identity and show the verified account details.</p>
+ 
+                 <div className="mb-3">
+-                    <label htmlFor="tokenInput" className="form-label">JWT Token:</label>
++                    <label htmlFor="tokenInput" className="form-label">Merchant QR Token</label>
+                     <textarea
+                         id="tokenInput"
+                         className="form-control"
+                         rows={4}
+-                        placeholder="Paste JWT token here"
++                        placeholder="Paste the token from the merchant\u2019s PayVerify QR / verify link"
+                         value={token}
+                         onChange={(e) => setToken(e.target.value)}
+                     />
+diff --git a/frontend/src/pages/RegisterPage.tsx b/frontend/src/pages/RegisterPage.tsx
+index 3f28854..c124c42 100644
+--- a/frontend/src/pages/RegisterPage.tsx
++++ b/frontend/src/pages/RegisterPage.tsx
+@@ -25,6 +25,10 @@ type Form = {
+     accountNumber: string;
+     accountNumber2: string;
+     email: string;
++    contactName: string;
++    phone: string;
++    businessAddress: string;
++    businessType: string;
+ };
+ 
+ export default function RegisterPage() {
+@@ -40,6 +44,10 @@ export default function RegisterPage() {
+         accountNumber: '',
+         accountNumber2: '',
+         email: '',
++        contactName: '',
++        phone: '',
++        businessAddress: '',
++        businessType: '',
+     });
+ 
+     const [busy, setBusy] = useState(false);
+@@ -67,6 +75,11 @@ export default function RegisterPage() {
+         if (form.accountNumber !== form.accountNumber2) return 'Account numbers do not match.';
+         if (!form.email.trim()) return 'Email is required.';
+         if (!isValidEmail(form.email)) return 'Enter a valid email address.';
++        if (!form.contactName.trim()) return 'Contact person name is required.';
++        if (!form.phone.trim()) return 'Phone number is required.';
++        if (!/^[0-9+\-\s]{7,15}$/.test(form.phone.trim())) return 'Enter a valid phone number.';
++        if (!form.businessAddress.trim()) return 'Business address is required.';
++        if (!form.businessType.trim()) return 'Business type is required.';
+         return null;
+     };
+ 
+@@ -100,6 +113,10 @@ export default function RegisterPage() {
+                 bank_name: form.bankName.trim(),
+                 account_number: form.accountNumber.trim(),
+                 email: form.email.trim(),
++                contact_name: form.contactName.trim(),
++                phone: form.phone.trim(),
++                business_address: form.businessAddress.trim(),
++                business_type: form.businessType.trim(),
+             };
+ 
+             if (import.meta.env.DEV) console.debug('[Register Merchant] payload', payload);
+@@ -140,6 +157,16 @@ export default function RegisterPage() {
+                             <input value={form.name} onChange={update('name')} placeholder="e.g., XYZ Enterprises" />
+                         </label>
+ 
++                        <label>
++                            <span>Contact Person <Req /></span>
++                            <input value={form.contactName} onChange={update('contactName')} placeholder="Full name of contact" />
++                        </label>
++
++                        <label>
++                            <span>Phone Number <Req /></span>
++                            <input value={form.phone} onChange={update('phone')} placeholder="e.g., 0803 000 0000" inputMode="tel" />
++                        </label>
++
+                         <label>
+                             <span>CAC Number <Req /></span>
+                             <input value={form.cacNumber} onChange={update('cacNumber')} placeholder="RC#######" />
+@@ -189,6 +216,16 @@ export default function RegisterPage() {
+                             <span>Email <Req /></span>
+                             <input value={form.email} onChange={update('email')} placeholder="you@company.com" />
+                         </label>
++
++                        <label className="full">
++                            <span>Business Address <Req /></span>
++                            <input value={form.businessAddress} onChange={update('businessAddress')} placeholder="Street, City, State" />
++                        </label>
++
++                        <label className="full">
++                            <span>Business Type <Req /></span>
++                            <input value={form.businessType} onChange={update('businessType')} placeholder="e.g., Retail, Hospitality, Logistics" />
++                        </label>
+                     </div>
+ 
+                     {err && <div className="alert err" role="alert">{err}</div>}
+diff --git a/src/controllers/PurchaseOrderController.ts b/src/controllers/PurchaseOrderController.ts
+index 0717a56..7736346 100644
+--- a/src/controllers/PurchaseOrderController.ts
++++ b/src/controllers/PurchaseOrderController.ts
+@@ -980,6 +980,21 @@ export class PurchaseOrderController {
+         }
+     };
+ 
++    // POST /api/purchase-orders/:id/checkout — create a payment link from a PO
++    createCheckout = async (req: Request, res: Response): Promise<void> => {
++        try {
++            const id = Number(req.params.id);
++            const po: any = await this.purchaseOrderService.getPurchaseOrderById(id);
++            if (!po) { res.status(404).json({ message: 'Purchase order not found' }); return; }
++            const intent: any = await this.paymentIntentService.createFromPurchaseOrder(po);
++            const token = intent?.token ?? intent?.get?.('token');
++            const paymentLink = intent?.payment_link ?? intent?.get?.('payment_link');
++            res.json({ success: true, token, paymentLink });
++        } catch (err: any) {
++            res.status(500).json({ message: err.message });
++        }
++    };
++
+     getPurchaseOrderStats = async (req: Request, res: Response): Promise<void> => {
+ 
+         try {
+diff --git a/src/controllers/merchantController.ts b/src/controllers/merchantController.ts
+index d87640f..9a8cb1e 100644
+--- a/src/controllers/merchantController.ts
++++ b/src/controllers/merchantController.ts
+@@ -143,6 +143,10 @@ export const createMerchant = async (req: Request, res: Response) => {
+         account_number,
+         bank_name,
+         email,             // ← required
++        contact_name,
++        phone,
++        business_address,
++        business_type,
+     } = req.body;
+ 
+     // 1) Validate presence
+@@ -187,6 +191,10 @@ export const createMerchant = async (req: Request, res: Response) => {
+             account_number,
+             bank_name,
+             email,
++            contact_name: contact_name ?? null,
++            phone: phone ?? null,
++            business_address: business_address ?? null,
++            business_type: business_type ?? null,
+         });
+ 
+         // 5) Build QR payload (mask account number)
+@@ -266,3 +274,58 @@ export const createMerchant = async (req: Request, res: Response) => {
+     }
+ 
+ };
++
++
++// =============================================================================
++// AGENTS (sub-users under a merchant)
++// POST /api/merchants/:id/agents  — create an agent
++// GET  /api/merchants/:id/agents  — list agents
++// =============================================================================
++export const createAgent = async (req: Request, res: Response) => {
++    try {
++        const merchantId = Number(req.params.id);
++        const { name, email, phone, password, role } = req.body || {};
++        if (!email || !password) {
++            return res.status(400).json({ message: 'Email and password are required' });
++        }
++        const merchant = await Merchant.findByPk(merchantId);
++        if (!merchant) return res.status(404).json({ message: 'Merchant not found' });
++        const authUserId = Number((req as any)?.user?.id ?? (req as any)?.userId);
++        if (Number(merchant.userId) !== authUserId) {
++            return res.status(403).json({ message: 'You do not own this merchant' });
++        }
++        const existing = await User.findOne({ where: { email } });
++        if (existing) return res.status(409).json({ message: 'A user with this email already exists' });
++        const agent = await User.create({
++            email,
++            password,
++            role: role || 'agent',
++            name: name ?? null,
++            phone: phone ?? null,
++            merchant_id: merchantId,
++        } as any);
++        return res.status(201).json({
++            success: true,
++            agent: { id: agent.id, email: agent.email, name: agent.name ?? null, phone: agent.phone ?? null, role: agent.role, merchant_id: merchantId },
++        });
++    } catch (err: any) {
++        return res.status(500).json({ message: err.message });
++    }
++};
++
++export const listAgents = async (req: Request, res: Response) => {
++    try {
++        const merchantId = Number(req.params.id);
++        const authUserId = Number((req as any)?.user?.id ?? (req as any)?.userId);
++        const merchant = await Merchant.findByPk(merchantId);
++        if (!merchant) return res.status(404).json({ message: 'Merchant not found' });
++        if (Number(merchant.userId) !== authUserId) return res.status(403).json({ message: 'Forbidden' });
++        const agents = await User.findAll({
++            where: { merchant_id: merchantId, role: 'agent' },
++            attributes: ['id', 'email', 'name', 'phone', 'role'],
++        });
++        return res.json({ success: true, agents });
++    } catch (err: any) {
++        return res.status(500).json({ message: err.message });
++    }
++};
+diff --git a/src/models/Merchant.ts b/src/models/Merchant.ts
+index dac2d72..5adc890 100644
+--- a/src/models/Merchant.ts
++++ b/src/models/Merchant.ts
+@@ -173,6 +173,11 @@ export class Merchant extends Model<
+     declare account_number: string;
+     declare bank_name: string;
+ 
++    declare contact_name: string | null;
++    declare phone: string | null;
++    declare business_address: string | null;
++    declare business_type: string | null;
++
+     // QR metadata
+     declare qrToken: string | null;       // JWT or payload used to render/verify QR
+     declare qrUrl: string | null;         // Cloudinary (or other) URL for the QR image
+@@ -227,6 +232,11 @@ Merchant.init(
+         account_number: { type: DataTypes.STRING, allowNull: false },
+         bank_name: { type: DataTypes.STRING, allowNull: false },
+ 
++        contact_name: { type: DataTypes.STRING, allowNull: true },
++        phone: { type: DataTypes.STRING, allowNull: true },
++        business_address: { type: DataTypes.STRING, allowNull: true },
++        business_type: { type: DataTypes.STRING, allowNull: true },
++
+         // QR-related fields
+         qrToken: { type: DataTypes.TEXT, allowNull: true },
+         qrUrl: { type: DataTypes.STRING, allowNull: true },
+diff --git a/src/models/User.ts b/src/models/User.ts
+index baa4ebb..7358a07 100644
+--- a/src/models/User.ts
++++ b/src/models/User.ts
+@@ -15,6 +15,9 @@ export interface UserAttributes {
+     email: string;
+     password_hash: string;
+     role: string;
++    name?: string | null;
++    phone?: string | null;
++    merchant_id?: number | null;
+     createdAt?: Date;
+     updatedAt?: Date;
+ 
+@@ -36,6 +39,9 @@ export class User
+     public email!: string;
+     public password_hash!: string;
+     public role!: string;
++    public name?: string | null;
++    public phone?: string | null;
++    public merchant_id?: number | null;
+     public password?: string;
+ 
+     public resetTokenHash?: string | null;
+@@ -78,6 +84,10 @@ export const UserModel = User.init(
+             defaultValue: 'merchant',
+         },
+ 
++        name: { type: DataTypes.STRING, allowNull: true },
++        phone: { type: DataTypes.STRING, allowNull: true },
++        merchant_id: { type: DataTypes.INTEGER, allowNull: true },
++
+         // ✅ NEW columns for forgot/reset flow
+         resetTokenHash: {
+             type: DataTypes.STRING(255),
+diff --git a/src/routes/PurchaseOrderRoutes.ts b/src/routes/PurchaseOrderRoutes.ts
+index 987f5fc..7cc47cd 100644
+--- a/src/routes/PurchaseOrderRoutes.ts
++++ b/src/routes/PurchaseOrderRoutes.ts
+@@ -58,6 +58,11 @@ export const createPurchaseOrderRoutes = (
+         controller.createPurchaseOrder.bind(controller)
+     );
+ 
++    router.post(
++        '/:id/checkout',
++        controller.createCheckout.bind(controller)
++    );
++
+ 
+     // --------------------------------------------------------------------------------
+     // GET PURCHASE ORDER STATS  ✅ NEW FIX
+diff --git a/src/routes/merchantRoutes.ts b/src/routes/merchantRoutes.ts
+index fa1e360..637bc03 100644
+--- a/src/routes/merchantRoutes.ts
++++ b/src/routes/merchantRoutes.ts
+@@ -5,6 +5,8 @@ import {
+     getMerchantById,
+     getMerchantCount,   // ✅ new export
+     createMerchant,
++    createAgent,
++    listAgents,
+ } from '../controllers/merchantController';
+ import { verifyJwtMiddleware } from '../middlewares/authMiddleware';
+ 
+@@ -116,4 +118,7 @@ router.get('/:id', verifyJwtMiddleware, getMerchantById);
+  */
+ router.post('/', verifyJwtMiddleware, createMerchant);
+ 
++router.post('/:id/agents', verifyJwtMiddleware, createAgent);
++router.get('/:id/agents', verifyJwtMiddleware, listAgents);
++
+ export default router;

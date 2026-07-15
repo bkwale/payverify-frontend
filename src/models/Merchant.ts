@@ -173,6 +173,11 @@ export class Merchant extends Model<
     declare account_number: string;
     declare bank_name: string;
 
+    declare contact_name: string | null;
+    declare phone: string | null;
+    declare business_address: string | null;
+    declare business_type: string | null;
+
     // QR metadata
     declare qrToken: string | null;       // JWT or payload used to render/verify QR
     declare qrUrl: string | null;         // Cloudinary (or other) URL for the QR image
@@ -226,6 +231,11 @@ Merchant.init(
         // Banking / settlement
         account_number: { type: DataTypes.STRING, allowNull: false },
         bank_name: { type: DataTypes.STRING, allowNull: false },
+
+        contact_name: { type: DataTypes.STRING, allowNull: true },
+        phone: { type: DataTypes.STRING, allowNull: true },
+        business_address: { type: DataTypes.STRING, allowNull: true },
+        business_type: { type: DataTypes.STRING, allowNull: true },
 
         // QR-related fields
         qrToken: { type: DataTypes.TEXT, allowNull: true },

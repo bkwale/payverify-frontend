@@ -15,6 +15,9 @@ export interface UserAttributes {
     email: string;
     password_hash: string;
     role: string;
+    name?: string | null;
+    phone?: string | null;
+    merchant_id?: number | null;
     createdAt?: Date;
     updatedAt?: Date;
 
@@ -36,6 +39,9 @@ export class User
     public email!: string;
     public password_hash!: string;
     public role!: string;
+    public name?: string | null;
+    public phone?: string | null;
+    public merchant_id?: number | null;
     public password?: string;
 
     public resetTokenHash?: string | null;
@@ -77,6 +83,10 @@ export const UserModel = User.init(
             allowNull: false,
             defaultValue: 'merchant',
         },
+
+        name: { type: DataTypes.STRING, allowNull: true },
+        phone: { type: DataTypes.STRING, allowNull: true },
+        merchant_id: { type: DataTypes.INTEGER, allowNull: true },
 
         // ✅ NEW columns for forgot/reset flow
         resetTokenHash: {

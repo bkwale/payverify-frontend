@@ -16,6 +16,7 @@ import PaymentPage from './pages/PaymentPage';
 // existing imports…
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import AddAgentPage from './pages/AddAgentPage';
 import DashboardPage from './pages/DashboardPage';
 import TransactionsPage from './pages/TransactionsPage';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -81,6 +82,7 @@ const App = () => {
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/payment-success" element={<PaymentSuccessPage />} />
                 <Route path="/register" element={<RegisterPage />} />
+                <Route path="/add-agent" element={<AddAgentPage />} />
                 <Route path="/register-user" element={<UserRegistration />} />
                 <Route path="/register-bank" element={<BankRegistrationForm />} />
                 <Route path="/bank-login" element={<BankLoginPage />} />

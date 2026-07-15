@@ -64,6 +64,7 @@ const Navbar = () => {
                         </li>
                         <li className="nav-item">
                             <Link className={isActive('/register')} to="/register">Register</Link>
+                            <Link className={isActive('/add-agent')} to="/add-agent">Add Agent</Link>
                         </li>
                     </ul>
 

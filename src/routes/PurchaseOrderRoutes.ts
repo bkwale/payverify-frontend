@@ -58,6 +58,11 @@ export const createPurchaseOrderRoutes = (
         controller.createPurchaseOrder.bind(controller)
     );
 
+    router.post(
+        '/:id/checkout',
+        controller.createCheckout.bind(controller)
+    );
+
 
     // --------------------------------------------------------------------------------
     // GET PURCHASE ORDER STATS  ✅ NEW FIX

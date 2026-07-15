@@ -25,6 +25,10 @@ type Form = {
     accountNumber: string;
     accountNumber2: string;
     email: string;
+    contactName: string;
+    phone: string;
+    businessAddress: string;
+    businessType: string;
 };
 
 export default function RegisterPage() {
@@ -40,6 +44,10 @@ export default function RegisterPage() {
         accountNumber: '',
         accountNumber2: '',
         email: '',
+        contactName: '',
+        phone: '',
+        businessAddress: '',
+        businessType: '',
     });
 
     const [busy, setBusy] = useState(false);
@@ -67,6 +75,11 @@ export default function RegisterPage() {
         if (form.accountNumber !== form.accountNumber2) return 'Account numbers do not match.';
         if (!form.email.trim()) return 'Email is required.';
         if (!isValidEmail(form.email)) return 'Enter a valid email address.';
+        if (!form.contactName.trim()) return 'Contact person name is required.';
+        if (!form.phone.trim()) return 'Phone number is required.';
+        if (!/^[0-9+\-\s]{7,15}$/.test(form.phone.trim())) return 'Enter a valid phone number.';
+        if (!form.businessAddress.trim()) return 'Business address is required.';
+        if (!form.businessType.trim()) return 'Business type is required.';
         return null;
     };
 
@@ -100,6 +113,10 @@ export default function RegisterPage() {
                 bank_name: form.bankName.trim(),
                 account_number: form.accountNumber.trim(),
                 email: form.email.trim(),
+                contact_name: form.contactName.trim(),
+                phone: form.phone.trim(),
+                business_address: form.businessAddress.trim(),
+                business_type: form.businessType.trim(),
             };
 
             if (import.meta.env.DEV) console.debug('[Register Merchant] payload', payload);
@@ -138,6 +155,16 @@ export default function RegisterPage() {
                         <label>
                             <span>Business Name <Req /></span>
                             <input value={form.name} onChange={update('name')} placeholder="e.g., XYZ Enterprises" />
+                        </label>
+
+                        <label>
+                            <span>Contact Person <Req /></span>
+                            <input value={form.contactName} onChange={update('contactName')} placeholder="Full name of contact" />
+                        </label>
+
+                        <label>
+                            <span>Phone Number <Req /></span>
+                            <input value={form.phone} onChange={update('phone')} placeholder="e.g., 0803 000 0000" inputMode="tel" />
                         </label>
 
                         <label>
@@ -188,6 +215,16 @@ export default function RegisterPage() {
                         <label className="full">
                             <span>Email <Req /></span>
                             <input value={form.email} onChange={update('email')} placeholder="you@company.com" />
+                        </label>
+
+                        <label className="full">
+                            <span>Business Address <Req /></span>
+                            <input value={form.businessAddress} onChange={update('businessAddress')} placeholder="Street, City, State" />
+                        </label>
+
+                        <label className="full">
+                            <span>Business Type <Req /></span>
+                            <input value={form.businessType} onChange={update('businessType')} placeholder="e.g., Retail, Hospitality, Logistics" />
                         </label>
                     </div>
 

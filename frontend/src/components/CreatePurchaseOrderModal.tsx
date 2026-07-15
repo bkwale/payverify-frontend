@@ -2297,7 +2297,7 @@ const CreatePurchaseOrderModal: React.FC<Props> = ({
                     }))
             };
 
-            await api.post(
+            const poRes = await api.post(
                 "/purchase-orders",
                 payload,
                 {
@@ -2317,6 +2317,24 @@ const CreatePurchaseOrderModal: React.FC<Props> = ({
             onCreateSuccess();
 
             onClose();
+
+            // Proceed to checkout: mint a pay link from the new PO and open the pay page
+            try {
+                const poId = poRes?.data?.data?.id ?? poRes?.data?.id;
+                if (poId) {
+                    const co = await api.post(
+                        `/purchase-orders/${poId}/checkout`,
+                        {},
+                        { headers: { Authorization: `Bearer ${token}` } }
+                    );
+                    const payToken = co?.data?.token;
+                    if (payToken) {
+                        window.location.href = `/pay/${payToken}`;
+                    }
+                }
+            } catch {
+                /* checkout is best-effort; the PO is already created */
+            }
 
         }
         catch (error: any) {

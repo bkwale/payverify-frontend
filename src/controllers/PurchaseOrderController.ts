@@ -980,6 +980,21 @@ export class PurchaseOrderController {
         }
     };
 
+    // POST /api/purchase-orders/:id/checkout — create a payment link from a PO
+    createCheckout = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const id = Number(req.params.id);
+            const po: any = await this.purchaseOrderService.getPurchaseOrderById(id);
+            if (!po) { res.status(404).json({ message: 'Purchase order not found' }); return; }
+            const intent: any = await this.paymentIntentService.createFromPurchaseOrder(po);
+            const token = intent?.token ?? intent?.get?.('token');
+            const paymentLink = intent?.payment_link ?? intent?.get?.('payment_link');
+            res.json({ success: true, token, paymentLink });
+        } catch (err: any) {
+            res.status(500).json({ message: err.message });
+        }
+    };
+
     getPurchaseOrderStats = async (req: Request, res: Response): Promise<void> => {
 
         try {
